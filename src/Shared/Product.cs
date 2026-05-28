@@ -38,7 +38,7 @@ namespace Companova.Maui.InAppPurchase.Service
         /// currency. For example, if price is "€7.99", price_amount_micros is "7990000". 
         /// This value represents the localized, rounded price for a particular currency.
         /// </summary>
-        public long MicrosPrice { get; set; }
+        public long? MicrosPrice { get; set; }
 
         /// <summary>
         /// Gets or sets the localized introductory price.

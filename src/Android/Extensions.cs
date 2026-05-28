@@ -83,58 +83,5 @@ namespace Companova.Maui.InAppPurchase.Service
 
             return PurchaseState.Unknown;
         }
-
-        public static Product ToProduct(this ProductDetails p, string billingProductType)
-        {
-            string formattedPrice = string.Empty;
-            string currencyCode = string.Empty;
-            long microsPrice = 0L;
-            string localizedIntroductoryPrice = string.Empty;
-            long microsIntroductoryPrice = 0L;
-
-            if (billingProductType == BillingClient.ProductType.Subs)
-            {
-                // For subscriptions, use the first subscription offer's first pricing phase
-                var subOfferDetails = p.SubscriptionOfferDetails;
-                var firstOffer = subOfferDetails?.Count > 0 ? subOfferDetails[0] : null;
-                var pricingPhases = firstOffer?.PricingPhases?.PricingPhaseList;
-                if (pricingPhases != null && pricingPhases.Count > 0)
-                {
-                    formattedPrice = pricingPhases[0].FormattedPrice ?? string.Empty;
-                    currencyCode = pricingPhases[0].PriceCurrencyCode ?? string.Empty;
-                    microsPrice = pricingPhases[0].PriceAmountMicros;
-
-                    // If there is more than one pricing phase, the second one is the introductory price
-                    if (pricingPhases.Count > 1)
-                    {
-                        localizedIntroductoryPrice = pricingPhases[1].FormattedPrice ?? string.Empty;
-                        microsIntroductoryPrice = pricingPhases[1].PriceAmountMicros;
-                    }
-                }
-            }
-            else
-            {
-                // For one-time in-app products
-                var offerDetails = p.OneTimePurchaseOfferDetails;
-                if (offerDetails != null)
-                {
-                    formattedPrice = offerDetails.FormattedPrice ?? string.Empty;
-                    currencyCode = offerDetails.PriceCurrencyCode ?? string.Empty;
-                    microsPrice = offerDetails.PriceAmountMicros;
-                }
-            }
-
-            return new Product
-            {
-                Name = p.Name ?? string.Empty,
-                Description = p.Description ?? string.Empty,
-                ProductId = p.ProductId ?? string.Empty,
-                FormattedPrice = formattedPrice,
-                CurrencyCode = currencyCode,
-                MicrosPrice = microsPrice,
-                LocalizedIntroductoryPrice = localizedIntroductoryPrice,
-                MicrosIntroductoryPrice = microsIntroductoryPrice
-            };
-        }
     }
 }

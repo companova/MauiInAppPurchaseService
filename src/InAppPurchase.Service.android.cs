@@ -136,9 +136,10 @@ namespace Companova.Maui.InAppPurchase.Service
 
             _connected = new TaskCompletionSource<object>();
 
+            PendingPurchasesParams pendingParams = PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build();
             _billingClient = BillingClient.NewBuilder(Application.Context)
                 .SetListener(this)
-                .EnablePendingPurchases(PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build())
+                .EnablePendingPurchases(pendingParams)
                 .Build();
 
             // Attempt to connect to the service
@@ -153,7 +154,7 @@ namespace Companova.Maui.InAppPurchase.Service
                 _connected.TrySetResult(null);
             }
 
-            // Return awaitable Task which is signaled when the BillingClient calls OnBillingSetupFinished
+            // Return awaitable Task which is signaled when the BillingClient calls OnBillingServiceDisconnected
             return _connected.Task;
         }
 
@@ -196,16 +197,12 @@ namespace Companova.Maui.InAppPurchase.Service
         {
             string billingProductType = GetBillingProductType(productType);
 
-            // Build the QueryProductDetailsParams list
-            var productList = new List<QueryProductDetailsParams.Product>();
-            foreach (string productId in productIds)
-            {
-                productList.Add(QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId(productId)
-                    .SetProductType(billingProductType)
-                    .Build());
-            }
+            List<QueryProductDetailsParams.Product> productList = productIds.Select(p => QueryProductDetailsParams.Product.NewBuilder()
+                .SetProductType(billingProductType)
+                .SetProductId(p)
+                .Build()).ToList();
 
+            // Build the Sku Params
             QueryProductDetailsParams queryParams = QueryProductDetailsParams.NewBuilder()
                 .SetProductList(productList)
                 .Build();
@@ -227,18 +224,39 @@ namespace Companova.Maui.InAppPurchase.Service
                 throw new InAppPurchaseException(purchaseError, result.DebugMessage);
             }
 
-            // Get the ProductDetails list
-            IList<ProductDetails> productDetailsList = queryResult?.ProductDetailsList;
-            if (productDetailsList == null)
-                productDetailsList = new List<ProductDetails>();
+            // Wait till the products are received in the callback
+            IList<ProductDetails> productDetails = queryResult?.ProductDetails;
+            if (productDetails == null)
+                productDetails = new List<ProductDetails>();
 
-            // Add products to the Dictionary of ProductDetails
-            // We need ProductDetails to initiate the Purchase
-            foreach (ProductDetails pd in productDetailsList)
-                _retrievedProducts[pd.ProductId] = pd;
+            // Initialize the list of Products to return. Map the ProductDetails received from the Play Store to our Product class
+            List<Product> listOfProducts = new List<Product>(productDetails.Count);
+            foreach (ProductDetails product in productDetails)
+            {
+                // Add the Product to the Dictionary of ProductDetails
+                // We need ProductDetails to initiate the Purchase
+                _retrievedProducts.TryAdd(product.ProductId, product);
+
+                // Get One Time Purchase details. This is required to check if the product is free (e.g. promotional) or not,
+                // as well as to get the introductory price details
+
+                // TODO: Support Subscription Offer details when they are available in the Play Store API
+                // OneTimePurchaseDetail will be null for Subscriptions with Offers, but we should be able to get the offer details from SubscriptionOfferDetails
+                ProductDetails.OneTimePurchaseOfferDetails oneTimePurchaseDetail = product.GetOneTimePurchaseOfferDetails();
+
+                listOfProducts.Add(new Product
+                {
+                    Name = product.Title,
+                    Description = product.Description,
+                    CurrencyCode = oneTimePurchaseDetail?.PriceCurrencyCode,
+                    FormattedPrice = oneTimePurchaseDetail?.FormattedPrice,
+                    ProductId = product.ProductId,
+                    MicrosPrice = oneTimePurchaseDetail?.PriceAmountMicros,
+                });
+            }
 
             // Return products
-            return productDetailsList.Select(p => p.ToProduct(billingProductType));
+            return listOfProducts;
         }
 
         /// <summary>
@@ -271,29 +289,20 @@ namespace Companova.Maui.InAppPurchase.Service
                 throw new InAppPurchaseException(PurchaseError.DeveloperError,
                     $"Cannot find a retrieved Product with {productId} SKU. Products must be first queried from the Play Store");
 
-            // Build the ProductDetailsParams for the purchase flow
-            var productDetailsParamsList = new List<BillingFlowParams.ProductDetailsParams>();
-            var productDetailsParamsBuilder = BillingFlowParams.ProductDetailsParams.NewBuilder()
-                .SetProductDetails(productDetail);
-
-            // For subscriptions, an offer token is required
-            if (productDetail.ProductType == BillingClient.ProductType.Subs)
-            {
-                var subOfferDetails = productDetail.SubscriptionOfferDetails;
-                if (subOfferDetails != null && subOfferDetails.Count > 0)
-                    productDetailsParamsBuilder.SetOfferToken(subOfferDetails[0].OfferToken);
-            }
-
-            productDetailsParamsList.Add(productDetailsParamsBuilder.Build());
+            BillingFlowParams.ProductDetailsParams productDetailsParams = BillingFlowParams.ProductDetailsParams.NewBuilder()
+                     .SetProductDetails(productDetail)
+                     .Build();
 
             // Build FlowParam for the Purchase
             BillingFlowParams flowParams = BillingFlowParams.NewBuilder()
-                .SetProductDetailsParamsList(productDetailsParamsList)
-                .Build();
+                    .SetProductDetailsParamsList([productDetailsParams])
+                    .Build();
 
             // Set a new Task Source to wait for completion
             _transactionPurchased = new TaskCompletionSource<InAppPurchaseResult>();
             Task<InAppPurchaseResult> taskPurchaseComplete = _transactionPurchased.Task;
+
+            //_billingClient.QueryPurchaseHistoryAsync(BillingClient.SkuType.Inapp, this);
 
             // Initiate the Billing Process.
             BillingResult response = _billingClient.LaunchBillingFlow(_activity, flowParams);
