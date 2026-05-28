@@ -56,7 +56,7 @@ namespace Companova.Maui.InAppPurchase.Service
         {
             return new InAppPurchaseResult
             {
-                TransactionDateUtc = new DateTime(p.PurchaseTime),
+                TransactionDateUtc = DateTimeOffset.FromUnixTimeMilliseconds(p.PurchaseTime).UtcDateTime,
                 Id = p.OrderId,
                 ProductId = p.Products.FirstOrDefault(),
                 Acknowledged = p.IsAcknowledged,
