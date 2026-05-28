@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--Work around so the conditions work below-->
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks Condition=" '$(OS)' != 'Windows_NT' ">net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
+
+    <AssemblyName>Companova.Maui.InAppPurchase.Service</AssemblyName>
+    <RootNamespace>Companova.Maui.InAppPurchase.Service</RootNamespace>
+    <PackageId>Companova.Maui.InAppPurchase.Service</PackageId>
+
+    <Product>$(AssemblyName) ($(TargetFramework))</Product>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyFileVersion>1.0.0.0</AssemblyFileVersion>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <PackOnBuild>true</PackOnBuild>
+    <NeutralLanguage>en</NeutralLanguage>
+    <DefineConstants>$(DefineConstants);</DefineConstants>
+
+    <UseFullSemVerForNuGet>false</UseFullSemVerForNuGet>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <LangVersion>latest</LangVersion>
+    <DebugType>portable</DebugType>
+
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/companova/MauiInAppPurchaseService/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/companova/MauiInAppPurchaseService/</RepositoryUrl>
+    <PackageReleaseNotes>MAUI In-App Purchase Service targeting net10.0, net10.0-android, net10.0-ios. Android Billing Client upgraded to 8.3.0.2.</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>maui, ios, android, plugin, billing client, inappbilling, inapppurchase, Companova, Companova.Maui.InAppPurchase.Service</PackageTags>
+
+    <Title>Companova.Maui.InAppPurchase Plugin/Service for MAUI (iOS and Android)</Title>
+    <Summary>MAUI In-App-Purchase Plugin/Service for iOS and Android Mobile Applications</Summary>
+    <Description>MAUI In-App-Purchase Plugin/Service for iOS and Android Mobile Applications. Supports Android Billing Client 8.3.0.2.</Description>
+
+    <Owners>Dima Maltsev</Owners>
+    <Authors>Dima Maltsev</Authors>
+    <Company>CompaNova LLC</Company>
+    <Copyright>Copyright 2020 - 2025</Copyright>
+
+    <DisableExtraReferences>true</DisableExtraReferences>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)'=='Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)'=='Release' ">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="**\*.shared.cs" />
+    <Compile Include="Shared\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" $(TargetFramework.Contains('-android')) ">
+    <Compile Include="**\*.android.cs" />
+    <Compile Include="Android\*.cs" />
+    <PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.3.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" $(TargetFramework.Contains('-ios')) ">
+    <Compile Include="**\*.apple.cs" />
+    <Compile Include="iOS\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+</Project>
